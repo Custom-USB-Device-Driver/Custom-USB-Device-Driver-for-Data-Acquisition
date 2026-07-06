@@ -1,0 +1,102 @@
+USB protocol detailed information data packets, how it is sent,format of packets,USB data is transmitted in packets, sent Least Significant Bit (LSB) first using differential signaling and NRZI encoding. Every transaction generally consists of a Token packet (defining the request), an Data packet (carrying payload), and a Handshake packet (acknowledging receipt or reporting errors).1. How Packets Are Sent (The Physical & Data Link Layers)Differential Signaling: USB uses two data lines (D+ and D-) to transmit data. The signal state is determined by the voltage difference between them, which minimizes electromagnetic interference.NRZI Encoding: Non-Return to Zero Invert encoding is used. A "1" maintains the previous state, while a "0" inverts the state.Bit Stuffing: To maintain synchronization, if the transmitter sends six consecutive "1"s, it automatically inserts a "0." The receiver strips it out upon reading.Bit Order: All bits in a packet are transmitted LSB first.2. General Packet FormatEvery standard USB packet follows a similar sequential structure, depending on the transaction type:Field NameSize (Bits)DescriptionSYNC8 or 32Synchronization pattern. 8 bits for Low/Full Speed; 32 bits for High Speed.PID8Packet Identifier. Defines packet type and format.PayloadVariableData field (for Data packets) or Device/Endpoint info (for Token packets).CRC5 or 16Cyclic Redundancy Check for error detection.EOPVariableEnd of Packet marker.3. The 4 Main Packet TypesA. Token PacketsUsed by the host to initiate a transaction. They contain no data payload, only routing information.Format: SYNC + PID + ADDR (7-bit address) + ENDP (4-bit endpoint) + CRC5 + EOP.Types of Tokens:IN: Host requests data from a device.OUT: Host sends data to a device.SETUP: Host initiates control transfer.SOF (Start of Frame): Broadcasted by the host every 1 ms (Full Speed) or 125 μ s (High Speed) to establish timing references.B. Data PacketsContain the actual payload.Format: SYNC + PID + DATA (0 to 1,024 bytes) + CRC16 + EOP.Types: DATA0 and DATA1. These toggle back and forth between the host and device to ensure that no packets are lost or duplicated during transmission.C. Handshake PacketsUsed to acknowledge successful receipt of a packet or to report errors.Format: SYNC + PID + EOP.Types:ACK: Successfully received without error.NAK: Device is temporarily busy and cannot accept data (or has no data to send).STALL: Endpoint is halted or a control request is not supported.4. Packet Identifier (PID)The PID defines the structure and type of the packet. It is exactly 8 bits long, but formatted as 4 PID bits followed by 4 bit-wise complemented PID bits for error checking.Example: An ACK handshake packet has a PID value of 00101101 (0010 are the core bits, and 1101 are the inverted bits).For an in-depth, low-level breakdown of packet sequences and USB transfer types, you can review the BeyondLogic USB in a NutShell Guide.If you're interested, I can also:Explain how these packets combine to form USB Transfer Types (Control, Interrupt, Bulk, Isochronous).Discuss the Host Enumeration process.Detail the differences in USB 3.0+ packet formats (SuperSpeed).Let me know what you'd like to explore next!21 sitesTypes of USB Packets and USB Transfers (Part 2/6)USB Packet Fields. In USB the LSB of the packet is transmitted first. An USB packet contains different fields. They are: • Sync: I...Engineers GarageUSB communications - WikipediaProtocol layer. During USB communication, data is transmitted as packets. Initially, all packets are sent from the host via the ro...WikipediaUSB Data Packet Structure - FTDI3 USB DATA FORMAT. USB data is sent in packets Least Significant Bit (LSB) first. There are 4 main USB packet types :Token, Data, ...FTDIShow allYou said: what is communication flow in USB communication if i have configured my stm32 as CDC deviceWhen you configure an STM32 as a CDC (Communications Device Class) device, it emulates a virtual COM port over USB. The communication relies on Bulk Transfers for data and Interrupt Transfers for state management.Because USB is a host-controlled protocol, your STM32 cannot transmit data on its own initiative; it must wait for the PC (Host) to request or allow the transfer.1. The Core CDC EndpointsThe STM32 CubeMX / HAL stack automatically configures two USB interfaces and three Endpoints (EPs):Endpoint 0 (Control - Bi-directional): Handles enumeration, line coding (baud rate, parity), and connection state.Endpoint 1 or 2 (Interrupt IN): Sends state notifications (e.g., serial line states) from the STM32 to the PC.Endpoint OUT (Bulk OUT): Receives data sent from the PC to the STM32.Endpoint IN (Bulk IN): Sends data from the STM32 to the PC.2. Flow 1: Receiving Data (PC → STM32)When you type into a serial terminal on your PC, the data moves through a Bulk OUT Transaction:[ PC (Host) ]                                     [ STM32 (Device) ]
+
+      |                                                   |
+      | ---- (1) OUT Token Packet ----------------------> |
+      | ---- (2) DATA0/DATA1 Packet (Payload) ----------> |
+      |                                                   | [ Hardware checks CRC ]
+      | <--- (3) ACK Handshake Packet ------------------- | [ Data placed in RX Buffer ]
+      |                                                   |
+      |                                                   | [ Triggers HAL_CDC_ReceiveCback ]
+OUT Token: The PC tells the STM32 to prepare to receive data on the Bulk OUT Endpoint.DATA Packet: The PC transmits the payload bytes.ACK Handshake: The STM32 hardware verifies the CRC. If correct, it automatically sends an ACK packet back to the PC and triggers the CDC_Receive_FS() callback in your usbd_cdc_if.c file.Flow Control (NAK): If your STM32's internal buffer is full and processing is delayed, the STM32 will respond with a NAK handshake instead of an ACK. The PC will automatically retry later.3. Flow 2: Transmitting Data (STM32 → PC)When you call CDC_Transmit_FS() in your STM32 code, the data moves through a Bulk IN Transaction:[ PC (Host) ]                                     [ STM32 (Device) ]
+
+      |                                                   | [ App calls CDC_Transmit_FS ]
+      |                                                   | [ Data copied to USB TX FIFO ]
+      |                                                   |
+      | ---- (1) IN Token Packet -----------------------> |
+      | <--- (2) DATA0/DATA1 Packet (Payload) ----------- | [ Hardware sends FIFO data ]
+      |                                                   |
+      | [ Checks CRC ]                                    |
+      | ---- (3) ACK Handshake Packet ------------------> |
+Data Staging: Your code stages the data in the microcontroller's USB peripheral memory.IN Token: The PC continuously polls the STM32's Bulk IN endpoint. If the STM32 has no data ready when polled, it automatically replies with a NAK, and the host moves on.DATA Packet: Once data is staged and the PC issues the next IN token, the STM32 hardware automatically dumps the packet onto the bus.ACK Handshake: The PC receives the data, checks it, and returns an ACK to the STM32.4. Flow 3: Control & Line ConfigurationBefore any raw data transfers happen, the PC must configure the virtual serial port. This happens over Endpoint 0:SET_LINE_CODING: The PC sends a Control OUT transfer containing the baud rate (e.g., 115200), stop bits, parity, and data bits. The STM32 parses this in the CDC_Control_FS() callback.GET_LINE_CODING: The PC requests the current serial settings from the STM32.SET_CONTROL_LINE_STATE: The PC toggles the DTR (Data Terminal Ready) and RTS (Request to Send) lines. Virtual serial terminals use this to signal that the COM port has been opened or closed.If you are currently debugging your firmware, I can help you:Trace a bug where CDC_Transmit_FS() returns USBD_BUSY.Configure the circular RX ring buffer to prevent losing incoming bytes.Implement a mechanism to detect when the terminal software opens/closes the port.Let me know what issue or feature you are working on next!24 sitesIntroduction to USB with STM32 - stm32mcu5.3. 2.4. Communications Devices Class (CDC) This class allows the implementation of virtual COM ports and modems. This class' cod...STMicroelectronicsUse USB-CDC device driver for validationThis article is a how-to to explain how to enable the USB-CDC ( Communication Device Class ) profile to perform faster the validat...STMicroelectronicsSTM32 USB CDC Virtual COM Port: PC Communication Tutorial11 Mar 2026 — USB CDC ( Communication Device Class (CDC ) (Communications Device Class ( Communication Device Class (CDC ) ) is a USB standard t...ZboticShow allYou said: I have composed my device as CDC. I dont know where to startTo get your STM32 CDC Virtual COM Port up and running, you only need to focus on a single file generated by STM32CubeMX: usbd_cdc_if.c (USB Device CDC Interface).Here is the exact step-by-step workflow to start sending and receiving data.Step 1: Detect Connection (The DTR Check)Before sending data, your STM32 needs to know if a serial terminal (like PuTTY or TeraTerm) is actually open on the PC. When a terminal opens the port, it sets the DTR (Data Terminal Ready) signal.Open usbd_cdc_if.c.Find the function CDC_Control_FS.Locate the CDC_SET_CONTROL_LINE_STATE case and add a global variable flag:c/* Add this global variable at the top of your private variables */
+volatile uint8_t ComPortOpen = 0; 
+
+// Inside CDC_Control_FS()...
+case CDC_SET_CONTROL_LINE_STATE:
+    /* wValue bit 0 is DTR. If 1, terminal is open. If 0, terminal closed. */
+    if (cmd_data[2] & 0x01) {
+        ComPortOpen = 1;
+    } else {
+        ComPortOpen = 0;
+    }
+break;
+Use code with caution.Step 2: Transmit Data (STM32 → PC)To send data to your PC, use the globally available function CDC_Transmit_FS().Open your main.c file.Declare the external connection variable: extern volatile uint8_t ComPortOpen;In your while(1) loop, check the flag and send a test message:c#include <string.h>
+#include <stdio.h>
+
+char tx_buffer[50];
+
+while (1)
+{
+    if (ComPortOpen == 1) 
+    {
+        sprintf(tx_buffer, "Hello from STM32! \r\n");
+        
+        // Pass the pointer to data and its length
+        CDC_Transmit_FS((uint8_t*)tx_buffer, strlen(tx_buffer));
+        
+        HAL_Delay(1000); // Send every 1 second
+    }
+}
+Use code with caution.Step 3: Receive Data (PC → STM32)When the PC sends text, the USB hardware automatically triggers an interrupt and passes the data to CDC_Receive_FS() in usbd_cdc_if.c.Open usbd_cdc_if.c and find CDC_Receive_FS.This function gives you Buf (pointer to the received bytes) and Len (how many bytes arrived).Crucial Rule: You must process or copy this data quickly, then call USBD_CDC_ReceivePacket() at the bottom to tell the hardware you are ready for the next packet.Here is how to safely echo the data back to the PC as a test:cstatic int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
+{
+  /* USER CODE BEGIN 6 */
+  
+  // Echo the exact data we just received back to the PC
+  CDC_Transmit_FS(Buf, *Len);
+  
+  // Prepare hardware to receive the next USB packet
+  USBD_CDC_SetRxBuffer(&hUsbDeviceFS, Buf);
+  USBD_CDC_ReceivePacket(&hUsbDeviceFS);
+  return (USBD_OK);
+  /* USER CODE END 6 */
+}
+Use code with caution.Step 4: Test Your DeviceCompile and flash the code to your STM32.Connect the USB user port of the STM32 to your PC.Open Device Manager (Windows) or type ls /dev/tty* (Linux/Mac) to find your port (e.g., COM3).Open a serial terminal program (PuTTY, TeraTerm, or Arduino Serial Monitor).Configure it to your COM port. Note: Baud rate does not matter for virtual CDC USB, any value works.Open the connection. You should see "Hello from STM32!" printing, and typing anything should echo it back.If you want to move beyond basic testing, let me know if I should help you:Set up a circular ring buffer so incoming characters don't overwrite each other if the PC sends data too fast.Parse incoming strings into commands (like turning an LED on/off when typing "LED_ON").Solve a compiler error if CDC_Transmit_FS is not recognized in your main.c.16 sitesSTM32 USB virtual com port Receive - help : r/microcontrollers9 Dec 2016 — STM32 USB virtual com port Receive - help I generated the below project by using CubeMX. It sends data to a terminal window just f...RedditProgramming STM32F103C8 Board (Blue Pill) using USB Port22 Aug 2018 — Step 4: Once downloaded install the software, make sure your STM32 board is connect to your computer though FTDI board and then la...Circuit DigestSTM32 HAL USB CDC echoes transmitted data back to MCU [SOLVED]14 Feb 2026 — STM32 HAL USB CDC echoes transmitted data back to MCU [SOLVED] To solve this, the MCU should monitor the DTR signal and only trans...EEVblogShow allYou said: i have a sensor on stm32 whenever there is request from pc, i want to send data from usbTo handle requests from the PC and respond with sensor data, you need to implement a Request-Response mechanism.Your PC will send a specific text command (like "GET_SENSOR\n"), your STM32 will parse it in the background, and then it will transmit the sensor data back using CDC_Transmit_FS().Here is the exact structure to implement this safely.Step 1: Create an Actionable Command ParserYou must extract incoming data from the USB interrupt context and check for your specific keyword.Open usbd_cdc_if.c, scroll down to CDC_Receive_FS, and update it to parse the incoming data packet:c#include <string.h>
+
+// Declare your sensor request flag (defined in main.c)
+extern volatile uint8_t SensorRequested;
+
+static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
+{
+  /* USER CODE BEGIN 6 */
+  
+  // Null-terminate the incoming data string to make parsing safe
+  Buf[*Len] = '\0'; 
+
+  // Check if the PC sent the exact request string
+  // strstr checks if "GET_DATA" is anywhere inside the received packet
+  if (strstr((char*)Buf, "GET_DATA") != NULL) 
+  {
+      SensorRequested = 1; // Raise the flag for main.c to process
+  }
+
+  // Mandatory: Re-prime the USB hardware to receive the next packet
+  USBD_CDC_SetRxBuffer(&hUsbDeviceFS, Buf);
+  USBD_CDC_ReceivePacket(&hUsbDeviceFS);
+  return (USBD_OK);
+  
+  /* USER CODE END 6 */
+}
+Use code with caution.Step 2: Read the Sensor and Respond in main.cNever read sensors inside CDC_Receive_FS, because it runs inside an interrupt handler and will lock up your USB connection if the sensor read takes too long. Instead, process the request inside your main application loop.Open main.c and add the following logic:c#include <stdio.h>
+#include <string.h>
+
+/* Global Variables */
+volatile uint8_t SensorRequested = 0; // Flag raised by USB interrupt
+extern volatile uint8_t ComPortOpen;  // DTR flag from Step 1
+
+/* Dummy sensor reading function - replace with your actual sensor code */
+float Read_My_Sensor(void) {
+    return 24.5f; // e.g., Temperature in Celsius
+}
+
+int main(void)
+{
+  // ... STM32 initial
