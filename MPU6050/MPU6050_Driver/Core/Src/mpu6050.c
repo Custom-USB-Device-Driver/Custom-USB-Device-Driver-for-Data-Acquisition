@@ -1,0 +1,33 @@
+#include "mpu6050.h"
+
+
+HAL_StatusTypeDef MPU6050_IsReady(I2C_HandleTypeDef *hi2c)
+{
+
+	return HAL_OK;
+
+}
+
+
+HAL_StatusTypeDef MPU6050_ReadWhoAmI(I2C_HandleTypeDef *hi2c, uint8_t *id)
+{
+
+	return HAL_OK;
+
+}
+
+
+HAL_StatusTypeDef MPU6050_Init(I2C_HandleTypeDef *hi2c)
+{
+
+	return HAL_OK;
+
+}
+
+
+HAL_StatusTypeDef MPU6050_ReadAccel(I2C_HandleTypeDef *hi2c, MPU6050_t *mpu)
+{
+	return HAL_OK;
+
+
+}

@@ -1,0 +1,4 @@
+../Core/Src/mpu6050.c:4:19:MPU6050_IsReady	1
+../Core/Src/mpu6050.c:12:19:MPU6050_ReadWhoAmI	1
+../Core/Src/mpu6050.c:20:19:MPU6050_Init	1
+../Core/Src/mpu6050.c:28:19:MPU6050_ReadAccel	1
