@@ -307,7 +307,7 @@ The MPU6050 provides motion data to the STM32 through I²C. The STM32 acts as th
 
 
  ****Project Information****
-                                Project: Custom USB Device Driver for MPU6050 Sensor Data Acquisition
+                                          Project: Custom USB Device Driver for MPU6050 Sensor Data Acquisition
                                 Domain: Linux Device Drivers / Embedded Systems
                                 Microcontroller: STM32
                                 Sensor: MPU6050
