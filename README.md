@@ -2,7 +2,7 @@
 
 *****Project Overview*****
 
-a custom USB device driver and embedded firmware for real-time MPU6050 sensor data acquisitionusing the STM32F407G-DISC board. Implemented USB Full-Speed bulk communication, custom USB descriptors,and Linux kernel APIs to enable reliable kernel-space to user-space data transfer and seamless embedded device-to-host communication.
+a custom USB device driver and embedded firmware for real-time MPU6050 sensor data acquisition  using the STM32F407G-DISC board. Implemented USB Full-Speed bulk communication, custom USB descriptors,and Linux kernel APIs to enable reliable kernel-space to user-space data transfer and seamless embedded device-to-host communication.
 
 A custom usb device driver for data acquisition from a device sending MPU6050 accelerometer sensor values of X Y Z axis. STM32F407G DISC board is used as a custom USB with 12Mbps FS device through which sensor values will be passed to user programme through usb driver.
 
