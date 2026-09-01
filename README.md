@@ -307,15 +307,15 @@ The MPU6050 provides motion data to the STM32 through I²C. The STM32 acts as th
 
 
  ****Project Information****
-                                          Project: Custom USB Device Driver for MPU6050 Sensor Data Acquisition
-                                Domain: Linux Device Drivers / Embedded Systems
-                                Microcontroller: STM32
-                                Sensor: MPU6050
-                                Sensor Communication: I²C
-                                Host Communication: USB
-                                Host Operating System: Linux
-                                Driver Type: Custom Linux USB Kernel Driver
-                                Programming Languages: C / Embedded C
-                                Primary Application: Sensor Data Acquisition and Vibration Detection
-                                Project: CDAC Academic Project
+                                         1. Project: Custom USB Device Driver for MPU6050 Sensor Data Acquisition
+                               2.  Domain: Linux Device Drivers / Embedded Systems
+                               3.  Microcontroller: STM32
+                               4.  Sensor: MPU6050
+                               5.  Sensor Communication: I²C
+                               6.  Host Communication: USB
+                               7.  Host Operating System: Linux
+                               8.  Driver Type: Custom Linux USB Kernel Driver
+                               9.  Programming Languages: C / Embedded C
+                              10.  Primary Application: Sensor Data Acquisition and Vibration Detection
+                              11.  Project: CDAC Academic Project
 
