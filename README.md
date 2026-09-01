@@ -257,18 +257,19 @@ The final layer is the user-space .The purpose of the user-space layer is to acc
                                             C                            	Firmware implementation
 
 
-Linux Debugging Commands
+****Linux Debugging Commands****
 
-                                              Check whether the device is detected:     lsusb 
-                                              Monitor kernel messages:                  dmesg -w
+                                              Check whether the device is detected:   ->  lsusb 
                                               
-                                              Check loaded driver:                      lsmod
+                                              Monitor kernel messages:                ->  dmesg -w
                                               
-                                              Check driver information:                 modinfo mpu6050_usb.ko
+                                              Check loaded driver:                    ->  lsmod
                                               
-                                              Load the module:                          sudo insmod mpu6050_usb.ko
+                                              Check driver information:               ->  modinfo mpu6050_usb.ko
                                               
-                                              Remove the module:                        sudo rmmod mpu6050_usb
+                                              Load the module:                        ->  sudo insmod mpu6050_usb.ko
+                                              
+                                              Remove the module:                      ->  sudo rmmod mpu6050_usb
 
 ****Challenges Faced****
 
